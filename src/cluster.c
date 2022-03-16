@@ -447,6 +447,7 @@ int clusterNodeLoadInfo(redisCluster *cluster, clusterNode *node, list *friends,
     int success = 1;
     redisReply *reply =  NULL;
     if (ctx == NULL) {
+	fprintf(stderr, "ctx null, try connect %s:%d\n", node->ip, node->port);
         ctx = redisConnect(node->ip, node->port);
         if (ctx->err) {
             fprintf(stderr, "Could not connect to Redis at %s:%d: %s\n",
@@ -613,6 +614,7 @@ int clusterNodeLoadInfo(redisCluster *cluster, clusterNode *node, list *friends,
                     *p = '\0';
                     start = atoi(slotsdef);
                     stop = atoi(p + 1);
+		    fprintf(stderr, "map %s %d %d\n", node->ip, start, stop);
                     mapSlot(cluster, start, node);
                     mapSlot(cluster, stop, node);
                     while (start <= stop) {
@@ -646,6 +648,7 @@ int fetchClusterConfiguration(redisCluster *cluster,
         if (ep->host != NULL && ep->port) {
             proxyLogDebug("Trying cluster entry point %s:%d",
                 ep->host, ep->port);
+	    fprintf(stderr, "entry connect, try connect %s:%d\n", ep->host, ep->port);
             ctx = redisConnect(ep->host, ep->port);
         } else if (ep->socket != NULL) {
             proxyLogDebug("Trying cluster entry point %s", ep->socket);
@@ -698,6 +701,7 @@ int fetchClusterConfiguration(redisCluster *cluster,
     listRewind(friends, &li);
     while ((ln = listNext(&li))) {
         clusterNode *friend = ln->value;
+	fprintf(stderr, "friend %s:%d\n", friend->ip, friend->port);
         success = clusterNodeLoadInfo(cluster, friend, NULL, NULL);
         if (!success) {
             listDelNode(friends, ln);

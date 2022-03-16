@@ -3274,6 +3274,7 @@ static int splitPipelinedQueries(clientRequest *req, char *p, int is_inline) {
     req->pending_bulks = 0;
     /* Create a new request with the remaining buffer */
     clientRequest *new = createRequest(c);
+    gettimeofday(&new->ts_begin, NULL);
     new->buffer = sdscat(new->buffer, newbuf);
     sdsfree(newbuf);
     /* Set the new request as current in order to accept
@@ -3818,6 +3819,7 @@ static clusterNode *getRequestNode(clientRequest *req, sds *err) {
         }
         char *key = req->buffer + req->offsets[i];
         clusterNode *n = getNodeByKey(cluster, key, req->lengths[i], &slot);
+	// proxyLogInfo("slot [%d] node ip [%s]", slot, n->ip);
         if (n == NULL) break;
         if (node == NULL) {
             node = n;
@@ -4168,6 +4170,10 @@ static clientRequest *handleNextRequestsToCluster(clusterNode *node,
     clientRequest *req = NULL;
     while ((req = getFirstRequestToSend(node, NULL))) {
         int sent = sendRequestToCluster(req, NULL);
+	gettimeofday(&req->ts_end, NULL);
+	long seconds = req->ts_end.tv_sec - req->ts_begin.tv_sec;
+	long microseconds = req->ts_end.tv_usec - req->ts_begin.tv_usec;
+	proxyLogInfo("Elapsed time check = %ld, %ld", req->ts_end.tv_sec, req->ts_begin.tv_sec);
         if (!sent) {
             /* Sending request failed and request has already been freed. */
             if (failed != NULL && *failed == NULL) *failed = req;
@@ -4643,6 +4649,10 @@ static int processClusterReplyBuffer(redisContext *ctx, clusterNode *node,
                               " to client buffer...",
                               REQID_PRINTF_ARG(req));
                 redisCommandDef *cmd = req->command;
+		// gettimeofday(&req->ts_end, NULL);
+		// long seconds = req->ts_end.tv_sec - req->ts_begin.tv_sec;
+		// long microseconds = req->ts_end.tv_usec - req->ts_begin.tv_usec;
+		// proxyLogInfo("Elapsed time check = %ld, %ld", req->ts_end.tv_sec, req->ts_begin.tv_sec);
                 int cmdflags = cmd->proxy_flags;
                 if (cmd->handleReply && (cmdflags & CMDFLAG_HANDLE_REPLY)) {
                     if (req->command->handleReply(reply, req, obuf, len) !=

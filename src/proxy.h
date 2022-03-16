@@ -35,6 +35,7 @@
 #include "rax.h"
 #include "config.h"
 #include "version.h"
+#include <sys/time.h>
 
 #define CLIENT_STATUS_NONE          0
 #define CLIENT_STATUS_LINKED        1
@@ -64,6 +65,7 @@ typedef struct proxyThread {
 
 typedef struct clientRequest {
     struct client *client;
+    struct timeval ts_begin, ts_end;
     uint64_t id;
     sds buffer;
     int query_offset;
